@@ -1,15 +1,17 @@
+'use strict';
 //------------------- Command Class ------------------//
 class Command {
-   // targetElement;
-   // timeout;
-   // delay = 0;
-   // nextCommand = null;
-   
-   constructor(targetElement, timeout, delay, nextCommand) {
-      this.targetElement = targetElement;
+   // sheet
+   // content
+   // duration
+   // timeout
+   // delay
+   constructor(sheet, content, duration, delay) {
+      this.sheet = sheet;
+      this.content = content;
+      this.duration = duration;
+      this.timeout = duration / content.length;
       this.delay = delay;
-      this.nextCommand = nextCommand;
-      this.timeout = timeout;
    }
 
    execute() {
@@ -17,285 +19,294 @@ class Command {
    }
 
    overview() {
-      throw new Error("Abstract Method: Implementation required");
+      return {
+         'command': this.constructor.name,
+         'sheet': this.sheet,
+         'duration': this.duration,
+         'delay': this.delay,
+         'timeout': Math.round(this.timeout),
+         'content': this.content
+      };
    }
 
+   static sleep(ms) {
+      return new Promise(resolve => window.setTimeout(resolve, ms));
+   }
 }
 //------------------- Type Classes ------------------//
 class Type extends Command {
-   // content;
-   constructor(targetElement, timeout, delay, nextCommand, content) {
-      super(targetElement, timeout, delay, nextCommand);
-      this.content = content;
-   }
-   
-   async execute() {
-      for (let i = 0; i < this.content.length; i++) {
-         await Typewriter.sleep(this.timeout);
-         this.typeChar(this.content.charAt(i));
-      }
-      if (this.nextCommand != null) {
-         await Typewriter.sleep(this.nextCommand.delay);
-         this.nextCommand.execute();
-      }
+   constructor(sheet, content, duration, delay) {
+      super(sheet, content, duration, delay);
    }
 
-   typeChar(char) {
-      this.targetElement.innerHTML = this.targetElement.innerHTML + char;
-   }
+   async execute() { //cursor.position == 'end'
+      let count = this.content.length;
+      let i = 0;
+      let cursor = this.sheet.cursor;
+      while (count > 0) {
+         if (cursor.target.textNode.textContent.length == cursor.target.textContent.length) {
+            cursor.toNextTarget();
+            i = 0;
+         }
+         await Command.sleep(this.timeout);
+         cursor.target.textNode.textContent += cursor.target.textContent.charAt(i);
 
-   overview() {
-      return {command: "Type", 
-      target: this.targetElement.tagName, 
-      count: this.content.length, 
-      timeout: Math.round(this.timeout), 
-      duration: Math.round(this.timeout*this.content.length),
-      delay: this.delay, content: this.content,
-      'next command': this.nextCommand};
+         i++;
+         count--;
+      }
+
    }
 }
 
-class TypeTag extends Type {
-   // tag;
-   constructor(targetElement, timeout, delay, nextCommand, content, tag) {
-      super(targetElement, timeout, delay, nextCommand, content);
-      this.tag = tag;
-   }
-
-   execute() {
-      let child = document.createElement(this.tag);
-      this.targetElement = this.targetElement.insertAdjacentElement('beforeend', child);     
-      super.execute();
-   }
-
-   overview() {
-      let overview = super.overview();
-      overview.command = "TypeTag";
-      overview.target = this.tag;
-      return overview;
-   }
-}
 //------------------- Delete Classes ------------------//
 class Delete extends Command {
-   // content;
-   constructor(targetElement, timeout, delay, nextCommand, content) {
-      super(targetElement, timeout, delay, nextCommand);
-      this.content = content;
+   constructor(sheet, content, duration, delay) {
+      super(sheet, content, duration, delay);
    }
 
    async execute() {
-      for (let i = 1; i <= this.content.length; i++) {
-         await Typewriter.sleep(this.timeout);
-         this.deleteChar();
-      }
-      if (this.nextCommand != null) {
-         await Typewriter.sleep(this.nextCommand.delay);
-         this.nextCommand.execute();
-      }
-      return new Promise(resolve => resolve());
-   }
+      let count = this.content.length;
+      let cursor = this.sheet.cursor;
+      let i = cursor.target.textNode.textContent.length;
+      let end = cursor.targetIndex;
+      let start;
+      while (count > 0) {
+         if (i == 0) {
+            if (cursor.toPreviousTarget() == null) {
+               break;
+            }
+            i = cursor.target.textNode.textContent.length;
+         }
+         await Command.sleep(this.timeout);
+         cursor.target.textNode.textContent = cursor.target.textNode.textContent.slice(0, -1);
 
-   deleteChar() {
-      this.targetElement.innerHTML = this.targetElement.innerHTML.slice(0, -1);
-   }
+         i--;
+         count--;
+      }
+      start = cursor.targetIndex; //index of node being deleted
 
-   overview() {
-      return {command: "Delete", target: this.targetElement.tagName, count: this.content.length, timeout: Math.round(this.timeout), duration: Math.round(this.timeout*this.content.length), delay: this.delay, content: this.content, 'next command': this.nextCommand};
+      //if whole target is deleted and target is not end target
+      //then move to next target
+      if (i != 0 && start + 1 != this.sheet.targets.length) {
+         start++;
+      }
+
+      let deletedTargets = this.sheet.targets.splice(start, end - start + 1);
+
+      //if there is still targets, move cursor to new target
+      if (this.sheet.targets.length != 0) {
+         cursor.toTarget(this.sheet.targets[start], start);
+      }
+
+      return deletedTargets;
    }
 }
-
-class DeleteTag extends Delete {
-   // tag;
-   // childIndex;
-   constructor(targetElement, timeout, delay, nextCommand, content, tag, childIndex) {
-      super(targetElement, timeout, delay, nextCommand, content);
-      this.tag = tag;
-      this.childIndex = childIndex;
+//------------------- Cursor Class ------------------//
+class Cursor {
+   // sheet
+   // target
+   // targetIndex
+   // cursorElement
+   // cursorPosition = 'end'
+   constructor(sheet, target, targetIndex, cursorElement) {
+      this.sheet = sheet;
+      this.target = target;
+      this.targetIndex = targetIndex;
+      this.cursorElement = cursorElement;
+      this.cursorPosition = 'end';
    }
 
-   async execute() {
-      let child = this.targetElement.children[this.childIndex - 1];
-      this.targetElement = child;
-      await super.execute();
-      if (this.targetElement.textContent.length == 0) {
-         this.targetElement.remove();
-      }
-   }
-
-   overview() {
-      let overview = super.overview();
-      overview.command = "DeleteTag";
-      overview.target = this.tag;
-      overview.childIndex = this.childIndex;
-      return overview;
-   }
-}
-//------------------- Sheet Classes ------------------//
-class Sheet {
-   // commands;
-   // container;
-   // untouchedStr = undefined;
-   constructor(container) {
-      this.commands = [];
-      this.container = container;
-      this.untouchedStr = undefined;
-
-      let innerHTML = this.container.innerHTML;
-      this.deleteChildrenCounts = this.container.childElementCount;
-      let commandChunks = innerHTML.split(/(<!--\s*[t,d]\s*,\s*\w*\s*,?\s*\d*\s*,?\s*\d*\s*-->)/i);
-
-      let startPoint;
-      if (!commandChunks[0].startsWith("<!--")) {
-         startPoint = 1;
-         this.untouchedStr = commandChunks[0];
+   toNextTarget() {
+      this.target = this.sheet.targets[++this.targetIndex];
+      if (this.target == null) {
+         return null;
       } else {
-         startPoint = 0;
-      }
-
-      for (let i = commandChunks.length - 1; i >= startPoint; i--) {
-         if (commandChunks[i] == "" || commandChunks[i] == undefined)
-            continue;
-         else {
-            if (commandChunks[i].match(/<!--\s*t/i) != null) {
-               this.extractTypeCommands(container, commandChunks[i], commandChunks[i+1]);
-            } else if (commandChunks[i].match(/<!--\s*d/i) != null) {
-               this.extractDeleteCommands(container, commandChunks[i], commandChunks[i-1]);
-            }
-         }
+         return this.target;
       }
    }
-//-----------------------------------------------------------------//
-   extractParameters(chunk, regex) {
-      let params = [];
-      let scatters = chunk.split(regex);
-      for (let i = 0; i < scatters.length; i++) {
-         if (scatters[i] != "" && scatters[i] != undefined) 
-            params.push(scatters[i]);
+
+   toPreviousTarget() {
+      this.target = this.sheet.targets[--this.targetIndex];
+      if (this.target == null) {
+         return null;
+      } else {
+         return this.target;
       }
-      return params;
    }
 
-   extractTypeCommands(targetElement, commandStr, contentStr) {
-      let params = this.extractParameters(commandStr, /<!--\s*t\s*,\s*(\d*)\s*,?\s*(\d*)\s*-->/i)
-      let duration = params[0];
-      let delay = (params.length == 2) ? params[1] : 0;
-      
-      let nestedChunks = contentStr.split(/(<[^>]*>[^<]*<\/[^>]*>)/);
-      if (nestedChunks.length == 1) { //no tag inside
-         let nextCommand = (this.commands.length ==  0) ? null : this.commands[this.commands.length - 1];    
-         let newType = new Type(targetElement, duration/contentStr.length, delay, nextCommand, contentStr);
-         this.commands.push(newType);
-      } else { //tag inside
-         let rawString = contentStr.replace(/<[^>]*>/g, "");
-         let timeout = duration / rawString.length;
-         let chunk;
-         for (let i = nestedChunks.length - 1; i >= 0; i--) {
-            chunk = nestedChunks[i];
-            if (chunk == "" || chunk == undefined)
-               continue;
-            else {
-               if (chunk.startsWith("<")) { //TypeTag
-                  let tagParams = this.extractParameters(chunk, /<\s*(\w*)[^>]*>([^<]*)<\s*\/\s*\w*\s*>/);
-                  let tag = tagParams[0];
-                  let tagContent = (tagParams.length == 2) ? tagParams[1] : "";
-                  let nextCommand = (this.commands.length ==  0) ? null : this.commands[this.commands.length - 1];    
-                  let newTypeTag = new TypeTag(targetElement, timeout, 0, nextCommand, tagContent, tag);
-                  this.commands.push(newTypeTag);
-               } else {
-                  let nextCommand = (this.commands.length ==  0) ? null : this.commands[this.commands.length - 1];    
-                  let newType = new Type(targetElement, timeout, 0, nextCommand, chunk);
-                  this.commands.push(newType);
+   toTarget(newTarget, newTargetIndex) {
+      this.target = newTarget;
+      this.targetIndex = newTargetIndex;
+   }
+
+   render() { //inserts cursor before after this target (before next target)
+      let nextTarget;
+      let targets = this.sheet.targets;
+      if (targets.length == this.targetIndex + 1) { //target is last node
+         nextTarget == null;
+         this.target.textNode.parentNode.insertBefore(this.cursorElement, nextTarget);
+      } else {
+         nextTarget = targets[this.targetIndex + 1].textNode;
+         nextTarget.parentNode.insertBefore(this.cursorElement, nextTarget);
+      }
+   }
+
+   // move() ?
+}
+//------------------- Target Classes ------------------//
+class Target {
+   // textNode
+   // textContent
+   constructor(textNode, textContent) {
+      this.textNode = textNode;
+      this.textContent = textContent;
+   }
+}
+//------------------- Sheet Class ------------------// 
+class Sheet {
+   // htmlElement
+   // commands = []
+   // targets = []
+   // targetStartIndex
+   // cursor
+   constructor(htmlElement, cursorElement) {
+      this.commands = [];
+      this.targets = [];
+      this.htmlElement = htmlElement;
+
+      this.auditString = "";
+
+      let commandContents = Sheet.extractChunks(htmlElement.innerHTML.replace(/<[^!>]*>/g, ""), /(<!--[^>]*-->)/);
+      let commandIndex = 0;
+
+      if (!commandContents[commandIndex].startsWith("<!--")) {
+         this.auditString += commandContents[commandIndex];
+         commandIndex++;
+      };
+
+      this.extract(htmlElement, commandContents, commandIndex);
+      for (let i = this.targetStartIndex; i < this.targets.length; i++) {
+         this.targets[i].textNode.textContent = "";
+      }
+      this.cursor = new Cursor(this, this.targets[this.targetStartIndex], this.targetStartIndex, cursorElement);
+
+      delete this.auditString;
+   }
+
+   extract(node, commandContents, commandIndex) {
+      let childNode;
+      for (let i = 0; i < node.childNodes.length; i++) {
+         childNode = node.childNodes[i];
+         switch (childNode.nodeType) {
+            case 1: //ELEMENT_NODE
+               commandIndex = this.extract(childNode, commandContents, commandIndex); //to retain commandIndex value (essentially pass-by-reference)
+               break;
+            case 3: //TEXT_NODE
+               this.targets.push(new Target(childNode, childNode.textContent));
+               break;
+            case 8: //COMMENT_NODE
+               if (this.commands.length == 0) { //if there is untouched text before any commands
+                  this.targetStartIndex = this.targets.length; //set target at first command
                }
-            }
-         }
-         this.commands[this.commands.length - 1].delay = parseInt(delay, 10);
-      }
-
-   }
-
-   extractDeleteCommands(targetElement, commandStr, contentStr) {
-      let params = this.extractParameters(commandStr, /<!--\s*d\s*,\s*(\w*)\s*,\s*(\d*)\s*,?\s*(\d*)\s*-->/i)
-      let deleteTarget = params[0];
-      let duration = params[1];
-      let delay = (params.length == 3) ? params[2] : 0;
-      
-      let nestedChunks = contentStr.split(/(<[^>]*>[^<]*<\/[^>]*>)/);
-      if (nestedChunks.length == 1) { //no tag inside
-         let nextCommand = (this.commands.length == 0) ? null : this.commands[this.commands.length - 1];
-         let content;
-         if (deleteTarget == "all") {
-            content = contentStr;
-         } else if (/^\d+$/.test(deleteTarget)) {
-            content = contentStr.slice(-deleteTarget);
-         } else {
-            content = contentStr.slice(contentStr.lastIndexOf(deleteTarget), contentStr);
-         }
-         let newDelete = new Delete(targetElement, duration/content, parseInt(delay, 10), nextCommand, content);
-         this.commands.push(newDelete);
-      } else { //tag inside
-         let rawString = contentStr.replace(/<[^>]*>/g, "");
-         let numberOfCharToDelete;
-         if (deleteTarget == "all") {
-            numberOfCharToDelete = rawString.length;
-         } else if (/^\d+$/.test(deleteTarget)) {
-            numberOfCharToDelete = deleteTarget;
-         } else {
-            numberOfCharToDelete = rawString.length - rawString.lastIndexOf(deleteTarget);
-         }
-         let timeout = duration / numberOfCharToDelete;
-         
-         let chunk;
-         let newCommands = [];
-         for (let i = nestedChunks.length - 1; i >= 0; i--) {
-            chunk = nestedChunks[i];
-            if (chunk == "" || chunk == undefined)
-               continue;
-            else {
-               if (chunk.startsWith("<")) {//DeleteTag
-                  let tagParams = this.extractParameters(chunk, /<\s*(\w*)[^>]*>([^<]*)<\s*\/\s*\w*\s*>/);
-                  let tag = tagParams[0];
-                  let tagContent = (tagParams.length == 2) ? tagParams[1] : 0;
-                  // let nextCommand = (newCommands.length == 0) ? null : newCommands[newCommands.length - 1];
-                  let content = (numberOfCharToDelete >= tagContent.length) ? tagContent : tagContent.slice(-numberOfCharToDelete);
-                  let newDeleteTag = new DeleteTag(targetElement, timeout, 0, undefined, content, tag, this.deleteChildrenCounts - 1);
-                  newCommands.push(newDeleteTag);
-
-                  this.deleteChildrenCounts--;
-                  numberOfCharToDelete = numberOfCharToDelete - content.length;
-                  if (numberOfCharToDelete == 0)
+               let paramsStr = childNode.textContent.trim();
+               switch (paramsStr.charAt(0)) {
+                  case "t":
+                  case "T":
+                     this.commands.push(this.extractTypeCommand(paramsStr, commandContents[commandIndex + 1]));
+                     commandIndex += 2;
                      break;
-               } else { //Delete
-                  // let nextCommand = (newCommands.length == 0) ? null : newCommands[newCommands.length - 1];
-                  let content = (numberOfCharToDelete >= chunk.length) ? chunk : chunk.slice(-numberOfCharToDelete);
-                  let newDelete = new Delete(targetElement, timeout, 0, undefined, content);
-                  newCommands.push(newDelete);
-
-                  numberOfCharToDelete = numberOfCharToDelete - content.length;
-                  if (numberOfCharToDelete == 0)
+                  case "d":
+                  case "D":
+                     this.commands.push(this.extractDeleteCommand(paramsStr));
+                     commandIndex++;
                      break;
+                  default:
+                     throw new Error(`Command ${childNode.textContent} is not supported by Typewriter.`);
                }
-            }
-         }
-         newCommands[0].delay = parseInt(delay, 10);
-         newCommands[newCommands.length - 1].nextCommand = (this.commands.length == 0) ? null : this.commands[this.commands.length - 1];
-         this.commands.push(newCommands[newCommands.length - 1]);
-         for (let i = newCommands.length - 2; i >= 0; i--) {
-            newCommands[i].nextCommand = newCommands[i + 1];
-            this.commands.push(newCommands[i]);
+               break;
+            default:
+               throw new Error(`Node Type ${childNode.nodeType} is not supported by Typewriter.`);
          }
       }
+      return commandIndex;
    }
-//-----------------------------------------------------------------// 
+
+   extractTypeCommand(paramsStr, content) {
+      let params = Sheet.extractChunks(paramsStr, /t\s*,\s*([0-9.]*\s*[ms]*)\s*,?\s*([0-9.]*\s*[ms]*)\s*/i);
+      let duration = Sheet.extractTime(params[0]);
+      let delay = (params.length == 2) ? Sheet.extractTime(params[1]) : 0;
+      this.auditString += content;
+      return new Type(this, content, duration, delay);
+   }
+
+   extractDeleteCommand(paramsStr) {
+      let params = Sheet.extractChunks(paramsStr, /d\s*,\s*([^,]*)\s*,\s*([0-9.]*\s*[ms]*)\s*,?\s*([0-9.]*\s*[ms]*)\s*/i);
+      let duration = Sheet.extractTime(params[1]);
+      let delay = (params.length == 3) ? Sheet.extractTime(params[2]) : 0;
+      let targetParam = params[0];
+      let deleteContent;
+      if (targetParam == "all") {
+         deleteContent = this.auditString;
+         this.auditString = "";
+      } else if (/^\d+$/.test(targetParam)) {
+         let index = this.auditString.length - targetParam;
+         deleteContent = this.auditString.slice(index);
+         this.auditString = this.auditString.slice(0, index);
+      } else {
+         let index = this.auditString.lastIndexOf(targetParam);
+         if (index == -1) {
+            throw new Error(`Delete target ${targetParam} is not found.`)
+         } else {
+            deleteContent = this.auditString.slice(index);
+            this.auditString = this.auditString.slice(0, index);
+         }
+      }
+      return new Delete(this, deleteContent, duration, delay);
+   }
+
+   static extractChunks(string, regex) {
+      let extraction = string.split(regex);
+      let chunks = [];
+      let chunk;
+      for (let i = 0; i < extraction.length; i++) {
+         chunk = extraction[i];
+         if (chunk != "" && chunk != undefined) {
+            chunks.push(chunk);
+         }
+      }
+      return chunks;
+   }
+
+   static extractTime(timeParam) { //if s, converts to ms
+      let params = Sheet.extractChunks(timeParam, /([0-9.]*)\s*([ms]*)/i);
+      let time = parseFloat(params[0]);
+      switch (params[1]) {
+         case "ms":
+            break;
+         case "s":
+            time *= 1000;
+            break;
+         default:
+            throw new Error(`Time parameter ${timeParam} is not supported by Typewriter.`);
+      }
+      return time;
+   }
+   //-------------------------------------------------------//
    async execute() {
-      await Typewriter.sleep(this.commands[this.commands.length - 1].delay);
-      this.commands[this.commands.length - 1].execute();
+      let command;
+      for (let i = 0; i < this.commands.length; i++) {
+         command = this.commands[i];
+         if (command.delay != 0) {
+            await Command.sleep(command.delay);
+         }
+         await command.execute();
+      }
    }
 
-   overview() {
-      let commands = this.commands;
+   commandOverview() {
       let overview = [];
-      for (let i = commands.length - 1; i >= 0; i--) {
-         overview.push(commands[i].overview());
+      for (let i = 0; i < this.commands.length; i++) {
+         overview.push(this.commands[i].overview());
       }
       return overview;
    }
@@ -303,15 +314,11 @@ class Sheet {
 }
 //------------------- Typewriter Class ------------------//
 class Typewriter {
-   static type(sheet) {
-      sheet.container.innerHTML = sheet.untouchedStr;
-      sheet.execute();
+   static async type(sheet) {
+      await sheet.execute();
    }
-   
-   static feed(container) {
-      return new Sheet(container);
-   }
-   static sleep(ms) {
-      return new Promise(resolve => window.setTimeout(resolve, ms));
+
+   static feed(htmlElement, nodeElement) {
+      return new Sheet(htmlElement, nodeElement);
    }
 }
