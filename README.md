@@ -10,15 +10,15 @@ Steps:
          <script type="text/javascript" src="https://cdn.jsdelivr.net/gh/vnphanquang/pq-typewriterjs@master/pq-typewriter.js"></script>
 
 2. Include commands in markup:
-- Type command:
+- Type command syntax:
 
       ...<!--t, duration[, delay]-->...
-- Delete command:
+- Delete command syntax:
 
       ...<!--d, target, duration[, delay]-->...
 
 where: 
-- duration & delay are numbers in milliseconds or seconds
+- duration & delay are numbers in milliseconds or seconds. Delay is optional (zero by default).
 Ex: 500ms or 1s
 - target can be one of the following:
    - count: the number of characters to be deleted
@@ -36,11 +36,11 @@ Ex: 500ms or 1s
 
 4. Style in css: include any necessary style in CSS, including styles for cursor. See Demo above.
 
-5. Initiate animation in JS:
-   Ex: 
+5. Initiate animation in JS. For example:
    
        const cursor = document.getElementById("cursor");
        const typewriter = document.getElementById("typewriter");
+       
        var sheet = Typewriter.feed(typewriter, cursor); //<---expensive, feed as soon as possible
        Typewriter.type(sheet); //<---relatively inexpensive, type whenever ready
        Typewriter.reset(sheet); //<---pastes initial innerHTML to HTMLElement
