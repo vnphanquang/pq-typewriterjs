@@ -165,18 +165,22 @@ class Target {
 //------------------- Sheet Class ------------------// 
 class Sheet {
    // htmlElement
+   // initialInnerHTML
    // commands = []
    // targets = []
    // targetStartIndex
    // cursor
+   // estimatedDuration
    constructor(htmlElement, cursorElement) {
       this.commands = [];
       this.targets = [];
       this.htmlElement = htmlElement;
+      this.initialInnerHTML = htmlElement.innerHTML;
+      this.estimatedDuration = 0;
 
       this.auditString = "";
 
-      let commandContents = Sheet.extractChunks(htmlElement.innerHTML.replace(/<[^!>]*>/g, ""), /(<!--[^>]*-->)/);
+      let commandContents = Sheet.extractChunks(this.initialInnerHTML.replace(/<[^!>]*>/g, ""), /(<!--[^>]*-->)/);
       let commandIndex = 0;
 
       if (!commandContents[commandIndex].startsWith("<!--")) {
@@ -231,12 +235,13 @@ class Sheet {
       return commandIndex;
    }
 
-   extractTypeCommand(paramsStr, content) {
+   extractTypeCommand(paramsStr, contentStr) {
       let params = Sheet.extractChunks(paramsStr, /t\s*,\s*([0-9.]*\s*[ms]*)\s*,?\s*([0-9.]*\s*[ms]*)\s*/i);
       let duration = Sheet.extractTime(params[0]);
       let delay = (params.length == 2) ? Sheet.extractTime(params[1]) : 0;
-      this.auditString += content;
-      return new Type(this, content, duration, delay);
+      this.auditString += contentStr;
+      this.estimatedDuration += duration + delay;
+      return new Type(this, contentStr, duration, delay);
    }
 
    extractDeleteCommand(paramsStr) {
@@ -261,6 +266,7 @@ class Sheet {
             this.auditString = this.auditString.slice(0, index);
          }
       }
+      this.estimatedDuration += duration + delay;
       return new Delete(this, deleteContent, duration, delay);
    }
 
@@ -303,6 +309,10 @@ class Sheet {
       }
    }
 
+   async reset() {
+      this.htmlElement.innerHTML = this.initialInnerHTML;
+   }
+
    commandOverview() {
       let overview = [];
       for (let i = 0; i < this.commands.length; i++) {
@@ -320,5 +330,9 @@ class Typewriter {
 
    static feed(htmlElement, nodeElement) {
       return new Sheet(htmlElement, nodeElement);
+   }
+
+   static reset(sheet) {
+      sheet.reset();
    }
 }
