@@ -12,7 +12,7 @@ Steps:
 2. Include commands in markup:
 - Type command:
 
-      ...<!--t, duration[, delay]-->content...
+      ...<!--t, duration[, delay]-->...
 - Delete command:
 
       ...<!--d, target, duration[, delay]-->...
@@ -24,6 +24,10 @@ Ex: 500ms or 1s
    - count: the number of characters to be deleted
    - target: a substring that exists in the previous string
    - all: delete all previous content in this HTMLElement
+   
+-  Caution: no text is allowed between two consecutive command strings. For example:
+
+         ...<!--d,all,3s,500ms-->!!!no text allowed here!!!<!--t, 5s-->...
 
 3. Include an empty span element at the end of the HTMLElement for the cursor. For example, to type "this text" in 1s, wait for 500ms, and delete everything in 1s:
 
