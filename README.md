@@ -182,7 +182,7 @@ Example: invoke `Typewriter.feed()` and `Typewrtier.type()`, that's all
 
    |Method|Description|
    |:---:|---|
-   |`feed`|extracts and processes commands, deletes target contents and get ready for animation|
+   |`feed`|extracts and processes commands, deletes target contents, gets ready for animation|
    |`type`|initiates the animation process|
    |`reset`|pastes back the inital innerHTML of `typewriter` element|
 
@@ -197,7 +197,8 @@ Example: invoke `Typewriter.feed()` and `Typewrtier.type()`, that's all
 
 # Bugs? Ideas?
 
-Please do let me know if you found a bug. Comment on codepen, open an issue on github, include stack trace & steps to get to the error, ... Anything is much appreciated.
+Please do let me know if you find a bug. Comment on codepen, open an issue on github, include stack trace & steps to get to the error, ... Anything is much appreciated.
 
 Likewise, any contribution or idea is incredibly valuable. Thank you.
 
+# Behind the Scenes
