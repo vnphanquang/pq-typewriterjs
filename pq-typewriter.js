@@ -29,9 +29,6 @@ class Command {
       };
    }
 
-   static sleep(ms) {
-      return new Promise(resolve => window.setTimeout(resolve, ms));
-   }
 }
 //------------------- Type Classes ------------------//
 class Type extends Command {
@@ -48,7 +45,7 @@ class Type extends Command {
             cursor.toNextTarget();
             i = 0;
          }
-         await Command.sleep(this.timeout);
+         await Typewriter.sleep(this.timeout);
          cursor.target.textNode.textContent += cursor.target.textContent.charAt(i);
 
          i++;
@@ -77,7 +74,7 @@ class Delete extends Command {
             }
             i = cursor.target.textNode.textContent.length;
          }
-         await Command.sleep(this.timeout);
+         await Typewriter.sleep(this.timeout);
          cursor.target.textNode.textContent = cursor.target.textNode.textContent.slice(0, -1);
 
          i--;
@@ -303,7 +300,7 @@ class Sheet {
       for (let i = 0; i < this.commands.length; i++) {
          command = this.commands[i];
          if (command.delay != 0) {
-            await Command.sleep(command.delay);
+            await Typewriter.sleep(command.delay);
          }
          await command.execute();
       }
@@ -334,5 +331,9 @@ class Typewriter {
 
    static reset(sheet) {
       sheet.reset();
+   }
+
+   static sleep(ms) { //helper for command.execute()
+      return new Promise(resolve => window.setTimeout(resolve, ms));
    }
 }
