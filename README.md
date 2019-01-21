@@ -154,6 +154,8 @@ Example: invoke `Typewriter.feed()` and `Typewrtier.type()`, that's all
 
 ## `Typewrtier` Static Methods
 
+![Typewriter Method Infographics](/infographics/typewriter-static-methods.svg)
+
 - ### How to Use it?
 
    |Method|Parameters|Return|
@@ -201,4 +203,3 @@ Please do let me know if you find a bug. Comment on codepen, open an issue on gi
 
 Likewise, any contribution or idea is incredibly valuable. Thank you.
 
-# Behind the Scenes
