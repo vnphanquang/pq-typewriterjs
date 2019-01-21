@@ -11,6 +11,7 @@
   - [Markup Restrictions & Recommendations](#markup-restrictions--recommendations)
   - [Command](#command)
   - [Typewrtier Static Methods](#typewrtier-static-methods)
+  - [Debugging Sheet](#debugging-sheet)
 
 - [Bugs? Ideas?](#bugs-ideas)
 
@@ -20,7 +21,7 @@ Blah blah blah? See [Steps](#steps) and get right to it.
 
 **pq-typewriterjs** (*pq*) is a small Javascript library that provides a solution to typing animation on the web. It employs ES6 class syntatic sugar with an object-oriented approach in mind.
 
-There are plenty of solutions out there, and if you only need a one-time, single-line typing animation in pure CSS, this might not be for you. But read on, since *pq* offers some features that you might be looking for:
+There are plenty of solutions out there, and if you only need an one-time, single-line typing animation in pure CSS, this might not be for you. But read on, since *pq* offers some features that you might be looking for:
 
 - Parameterization with [commands](#2-write-commands-in-markup) in HTML markup through comments (hence no interference with document flow),
 - Multi-line dynamic typing & deleting,
@@ -106,10 +107,14 @@ Example: invoke `Typewriter.feed()` and `Typewrtier.type()`, that's all
    ...delete this text<!--d,all,3s,500ms--><!--t, 5s-->then type this...
    ```
 
-- **Cursor** element should be put at the end of the parent element and should be empty. A `<span>` works well.
+- **Cursor** element should be put at the end of the parent element and should be empty, unless you want to use some content as the cursor. A `<span>` works well.
 
    ```HTML
    <p>.........<span id="cursor"></span></p>
+   ```
+   or
+   ```HTML
+   <p>.........<span id="cursor">use this content as the cursor</span></p>
    ```
 
 - The `<pre>` tag is recommended for the **typewriter** element to honor line break in a multiline typing manner.
@@ -147,7 +152,7 @@ Example: invoke `Typewriter.feed()` and `Typewrtier.type()`, that's all
    |substring|`<!--d, john dough, 5s, 2s-->`|deletes any text after the substring "`john dough`" (if multiple matches, first match counting from the right is honored)|
    |count|`<!--d, 42, 5s, 300ms-->`|deletes 42 characters, including whitespace and linebreak, counting from the right|
 
-## Typewrtier Static Methods
+## `Typewrtier` Static Methods
 
 - ### How to Use it?
 
@@ -158,7 +163,7 @@ Example: invoke `Typewriter.feed()` and `Typewrtier.type()`, that's all
    |`Typewriter.reset(<Sheet>)`|a `Sheet` object|none|
 
    #### Cautions: 
-   - Always capture the return `Sheet` object to use it in type() and reset().
+   - Always capture the returned `Sheet` object to use it in `type` and `reset`.
       ```Javascript
       var sheet = Typewriter.feed(typewriter, cursor);
       // Typewriter.type(sheet);
@@ -177,12 +182,22 @@ Example: invoke `Typewriter.feed()` and `Typewrtier.type()`, that's all
 
    |Method|Description|
    |:---:|---|
-   |feed|extracts and processes commands, deletes target contents and get ready for animation|
-   |type|initiates the animation process|
-   |reset|pastes back the inital innerHTML of `typewriter` element|
+   |`feed`|extracts and processes commands, deletes target contents and get ready for animation|
+   |`type`|initiates the animation process|
+   |`reset`|pastes back the inital innerHTML of `typewriter` element|
+
+## Debugging `Sheet` 
+
+   Call `.commandOverview()` to see details of all the extracted commands.
+   ```Javascript
+   var sheet = Typewriter.feed(typewriter, cursor);
+   console.table(sheet.commandOverview());
+   ```
+   Note that delay and duration will be shown in milliseconds.
 
 # Bugs? Ideas?
 
-Please do let me know if you found a bug. Open an issue, include stack trace & steps to get to the error, ... Anything is much appreciated.
+Please do let me know if you found a bug. Comment on codepen, open an issue on github, include stack trace & steps to get to the error, ... Anything is much appreciated.
 
 Likewise, any contribution or idea is incredibly valuable. Thank you.
+
