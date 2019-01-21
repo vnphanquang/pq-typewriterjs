@@ -119,7 +119,7 @@ Example: invoke `Typewriter.feed()` and `Typewrtier.type()`, that's all
    ```
    If wrapping is concerned, see CSS [white-space](https://developer.mozilla.org/en-US/docs/Web/CSS/white-space), [word-break](https://developer.mozilla.org/en-US/docs/Web/CSS/word-break), and [overflow-wrap](https://developer.mozilla.org/en-US/docs/Web/CSS/overflow-wrap).
 
-- ID identifiers for the **typewriter** element and **cursor** element are up to you. But make sure to reflect them correctly in the script.
+- ID identifiers for **typewriter** element and **cursor** element are up to you. But make sure to reflect them correctly in the script.
 
 ## Command
 
@@ -129,7 +129,7 @@ Example: invoke `Typewriter.feed()` and `Typewrtier.type()`, that's all
    |Command |Syntax                                         |Example                      |
    |---     |---                                            |---                          |
    |Type    |`<!--t, duration[, delay]-->{content}`         |`<--t, 2s, 500ms-->...`         |
-   |Command |`{content}<!--d, target, duration[, delay]-->` |`...<--d, 42, 500ms, 200ms-->`  |
+   |Delete  |`{content}<!--d, target, duration[, delay]-->` |`...<--d, 42, 500ms, 200ms-->`  |
 
 - ### Parameters
 
@@ -152,12 +152,12 @@ Example: invoke `Typewriter.feed()` and `Typewrtier.type()`, that's all
 - ### How to Use it?
 
    |Method|Parameters|Return|
-   |---|---|---|---|
+   |---|---|---|
    |`Typewriter.feed(<HTMLElement>, <HTMLElement>)`|first: `typewriter element`, second: `cursor element` |a `Sheet` object|
    |`Typewriter.type(<Sheet)`|a `Sheet` object|none|
    |`Typewriter.reset(<Sheet>)`|a `Sheet` object|none|
 
-   Cautions: 
+   #### Cautions: 
    - Always capture the return `Sheet` object to use it in type() and reset().
       ```Javascript
       var sheet = Typewriter.feed(typewriter, cursor);
@@ -171,7 +171,6 @@ Example: invoke `Typewriter.feed()` and `Typewrtier.type()`, that's all
       //...some time later ...
       sheet = Typewriter.feed(typewriter, cursor);
       Typewriter.type(sheet);
-      Typewriter.reset(sheet)
       ```
 
 - ### What do they do?
