@@ -2,11 +2,13 @@
 //------------------- Command Class ------------------//
 class Command {
    // sheet
+   // commandIndex
    // content
    // duration
    // timeout
    // delay
-   constructor(sheet, content, duration, delay) {
+   constructor(sheet, commandIndex, content, duration, delay) {
+      this.commandIndex = commandIndex;
       this.sheet = sheet;
       this.content = content;
       this.duration = duration;
@@ -32,8 +34,8 @@ class Command {
 }
 //------------------- Type Classes ------------------//
 class Type extends Command {
-   constructor(sheet, content, duration, delay) {
-      super(sheet, content, duration, delay);
+   constructor(sheet, commandIndex, content, duration, delay) {
+      super(sheet, commandIndex, content, duration, delay);
    }
 
    async execute() { //cursor.position == 'end'
@@ -57,8 +59,8 @@ class Type extends Command {
 
 //------------------- Delete Classes ------------------//
 class Delete extends Command {
-   constructor(sheet, content, duration, delay) {
-      super(sheet, content, duration, delay);
+   constructor(sheet, commandIndex, content, duration, delay) {
+      super(sheet, commandIndex, content, duration, delay);
    }
 
    async execute() {
@@ -82,16 +84,20 @@ class Delete extends Command {
       }
       start = cursor.targetIndex; //index of node being deleted
 
-      //if whole target is deleted and target is not end target
-      //then move to next target
-      if (i != 0 && start + 1 != this.sheet.targets.length) {
+      //if target still has content and there were more than 1 target being deleted
+      //then point to next target
+      if (i != 0 && start != end) {
          start++;
       }
-
       let deletedTargets = this.sheet.targets.splice(start, end - start + 1);
 
-      //if there is still targets, move cursor to new target
-      if (this.sheet.targets.length != 0) {
+      //if next command is delete, stay at current target
+      if (this.sheet.commands[this.commandIndex + 1] instanceof Delete) {
+         cursor.toTarget(this.sheet.targets[start - 1], start - 1);
+      }
+      //if next command is type & there is still targets, 
+      //move cursor to next target
+      else if (this.sheet.targets.length != 0) {
          cursor.toTarget(this.sheet.targets[start], start);
       }
 
@@ -238,7 +244,7 @@ class Sheet {
       let delay = (params.length == 2) ? Sheet.extractTime(params[1]) : 0;
       this.auditString += contentStr;
       this.estimatedDuration += duration + delay;
-      return new Type(this, contentStr, duration, delay);
+      return new Type(this, this.commands.length, contentStr, duration, delay);
    }
 
    extractDeleteCommand(paramsStr) {
@@ -264,7 +270,7 @@ class Sheet {
          }
       }
       this.estimatedDuration += duration + delay;
-      return new Delete(this, deleteContent, duration, delay);
+      return new Delete(this, this.commands.length, deleteContent, duration, delay);
    }
 
    static extractChunks(string, regex) {
