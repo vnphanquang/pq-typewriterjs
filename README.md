@@ -15,6 +15,10 @@
 
 - [Bugs? Ideas?](#bugs-ideas)
 
+- [Behind The Scenes](#behind-the-scenes)
+  - [Sheet Construction - Typewriter `Feeding`](#sheet-construction---typewriter-feeding)
+  - [Sheet Execution - Typewriter `Typing`](#sheet-execution---typewriter-typing)
+
 # What Is This? and Why Does It Even Exist?
 
 Blah blah blah? See [Steps](#steps) and get right to it.
@@ -202,4 +206,34 @@ Example: invoke `Typewriter.feed()` and `Typewrtier.type()`, that's all
 Please do let me know if you find a bug. Comment on codepen, open an issue on github, include stack trace & steps to get to the error, ... Anything is much appreciated.
 
 Likewise, any contribution or idea is incredibly valuable. Thank you.
+
+# What's coming next?
+
+The following features will be implemented in the near future:
+
+- Moving cursor left or  right during operation
+- Looping through a set of commands for a finite or infinite amount of times.
+
+# Behind the Scenes
+
+## Sheet Construction - Typewriter `Feeding`
+
+The key concept that differs this project from other solutions is the construction of the `Sheet` object:
+
+![Sheet construction](/infographics/sheet-construction.svg)
+
+During `feeding`, **typewriter**'s [Child Nodes](https://developer.mozilla.org/en-US/docs/Web/API/Node/childNodes) are iterated:
+- the **cursor** element is extracted into a `Cursor` object, pointed to by `Sheet.cursor`, and
+- every [Text](https://developer.mozilla.org/en-US/docs/Web/API/Text) node is extracted into a `Target` object, added to `Sheet.targets`, and 
+- every [Comment](https://developer.mozilla.org/en-US/docs/Web/API/Comment) node is extracted into a `Command`, either `Type`, or `Delete`, added to `Sheet.commands`.
+
+## Sheet Execution - Typewriter `Typing`
+
+After `feeding`:
+
+![Sheet after feeding](/infographics/sheet-after-feeding.svg)
+
+During `Typewriter typing`, `Sheet.commands` is iterated, each `Command` is executed in order, `Sheet.cursor` is updated accordingly. As seen below, the `Type` command and `Sheet.cursor` work together to render text to `Sheet.htmlElement`. The next `Delete` command works in a much similar way, but in reverse.
+
+![Sheet execution](/infographics/sheet-execution.svg)
 
