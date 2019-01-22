@@ -67,11 +67,12 @@ class Delete extends Command {
       let count = this.content.length;
       let cursor = this.sheet.cursor;
       let i = cursor.target.textNode.textContent.length;
-      let end = cursor.targetIndex;
+      let end = cursor.target.targetIndex;
       let start;
       while (count > 0) {
          if (i == 0) {
             if (cursor.toPreviousTarget() == null) {
+               console.log(cursor.target.textNode.textContent);
                break;
             }
             i = cursor.target.textNode.textContent.length;
@@ -82,26 +83,26 @@ class Delete extends Command {
          i--;
          count--;
       }
-      start = cursor.targetIndex; //index of node being deleted
+      start = cursor.target.targetIndex; //index of node being deleted
 
-      //if target still has content and there were more than 1 target being deleted
-      //then point to next target
-      if (i != 0 && start != end) {
+      //if target still has content then point to next target
+      if (i != 0) {
          start++;
       }
-      let deletedTargets = this.sheet.targets.splice(start, end - start + 1);
+      for (let i = start; i <= end; i++) {
+         this.sheet.targets[i].isRemoved = true;
+      }
 
-      //if next command is delete, stay at current target
+      //if next command is delete, point to previous target
       if (this.sheet.commands[this.commandIndex + 1] instanceof Delete) {
-         cursor.toTarget(this.sheet.targets[start - 1], start - 1);
+         cursor.toTarget(this.sheet.targets[start - 1]);
       }
       //if next command is type & there is still targets, 
-      //move cursor to next target
+      //point to next (available) target
       else if (this.sheet.targets.length != 0) {
-         cursor.toTarget(this.sheet.targets[start], start);
+         cursor.toTarget(this.sheet.targets[end + 1]);
       }
 
-      return deletedTargets;
    }
 }
 //------------------- Cursor Class ------------------//
@@ -111,58 +112,75 @@ class Cursor {
    // targetIndex
    // cursorElement
    // cursorPosition = 'end'
-   constructor(sheet, target, targetIndex, cursorElement) {
+   constructor(sheet, target, cursorElement) {
       this.sheet = sheet;
       this.target = target;
-      this.targetIndex = targetIndex;
       this.cursorElement = cursorElement;
       this.cursorPosition = 'end';
    }
 
    toNextTarget() {
-      this.target = this.sheet.targets[++this.targetIndex];
-      if (this.target == null) {
-         return null;
+      this.target = this.sheet.targets[this.target.targetIndex + 1];
+
+      if (this.target.isRemoved == false) {
+         if (this.target == null) {
+            return null;
+         } else {
+            return this.target;
+         }
       } else {
-         return this.target;
+         return this.toNextTarget();
       }
+
    }
 
    toPreviousTarget() {
-      this.target = this.sheet.targets[--this.targetIndex];
-      if (this.target == null) {
-         return null;
+      this.target = this.sheet.targets[this.target.targetIndex - 1];
+
+      if (this.target.isRemoved == false) {
+         if (this.target == null) {
+            return null;
+         } else {
+            return this.target;
+         }
       } else {
-         return this.target;
+         return this.toPreviousTarget();
       }
+
    }
 
-   toTarget(newTarget, newTargetIndex) {
+   /**
+    * @param {Target} newTarget
+    */
+   toTarget(newTarget) {
       this.target = newTarget;
-      this.targetIndex = newTargetIndex;
    }
 
-   render() { //inserts cursor before after this target (before next target)
-      let nextTarget;
-      let targets = this.sheet.targets;
-      if (targets.length == this.targetIndex + 1) { //target is last node
-         nextTarget == null;
-         this.target.textNode.parentNode.insertBefore(this.cursorElement, nextTarget);
-      } else {
-         nextTarget = targets[this.targetIndex + 1].textNode;
-         nextTarget.parentNode.insertBefore(this.cursorElement, nextTarget);
-      }
-   }
+   // render() { //inserts cursor before after this target (before next target)
+   //    let nextTarget;
+   //    let targets = this.sheet.targets;
+   //    if (targets.length == this.targetIndex + 1) { //target is last node
+   //       nextTarget == null;
+   //       this.target.textNode.parentNode.insertBefore(this.cursorElement, nextTarget);
+   //    } else {
+   //       nextTarget = targets[this.targetIndex + 1].textNode;
+   //       nextTarget.parentNode.insertBefore(this.cursorElement, nextTarget);
+   //    }
+   // }
 
    // move() ?
 }
 //------------------- Target Classes ------------------//
 class Target {
    // textNode
+   // targetIndex
    // textContent
-   constructor(textNode, textContent) {
+   // isRemoved
+   constructor(textNode, targetIndex, textContent) {
       this.textNode = textNode;
+      this.targetIndex = targetIndex;
       this.textContent = textContent;
+      this.isRemoved = false;
    }
 }
 //------------------- Sheet Class ------------------// 
@@ -209,7 +227,7 @@ class Sheet {
                commandIndex = this.extract(childNode, commandContents, commandIndex); //to retain commandIndex value (essentially pass-by-reference)
                break;
             case 3: //TEXT_NODE
-               this.targets.push(new Target(childNode, childNode.textContent));
+               this.targets.push(new Target(childNode, this.targets.length, childNode.textContent));
                break;
             case 8: //COMMENT_NODE
                if (this.commands.length == 0) { //if there is untouched text before any commands
