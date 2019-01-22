@@ -237,13 +237,21 @@ class Sheet {
                switch (paramsStr.charAt(0)) {
                   case "t":
                   case "T":
-                     this.commands.push(this.extractTypeCommand(paramsStr, commandContents[commandIndex + 1]));
-                     commandIndex += 2;
+                     if (childNode.nextSibling.textContent == "" || childNode.nextSibling.nodeType == 8) { //no text to type
+                        throw new Error(`Command ${childNode.textContent} has no target text to type`);
+                     } else {
+                        this.commands.push(this.extractTypeCommand(paramsStr, commandContents[commandIndex + 1]));
+                        commandIndex += 2;
+                     }
                      break;
                   case "d":
                   case "D":
-                     this.commands.push(this.extractDeleteCommand(paramsStr));
-                     commandIndex++;
+                     if (childNode.previousSibling == null) {
+                        throw new Error(`Command ${childNode.textContent} has no target text to delete`);
+                     } else {
+                        this.commands.push(this.extractDeleteCommand(paramsStr));
+                        commandIndex++;
+                     }
                      break;
                   default:
                      throw new Error(`Command ${childNode.textContent} is not supported by Typewriter.`);
