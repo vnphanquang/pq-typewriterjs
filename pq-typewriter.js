@@ -7,6 +7,14 @@ class Command {
    // duration
    // timeout
    // delay
+
+   /**
+    * @param {Sheet} sheet 
+    * @param {number} commandIndex 
+    * @param {string} content 
+    * @param {number} duration in milliseconds
+    * @param {number} delay in milliseconds
+    */
    constructor(sheet, commandIndex, content, duration, delay) {
       this.commandIndex = commandIndex;
       this.sheet = sheet;
@@ -16,10 +24,17 @@ class Command {
       this.delay = delay;
    }
 
-   execute() {
+   /**
+    * (Abstract Method. Implementation required)
+    * executes this command
+    */
+   async execute() {
       throw new Error("Abstract Method: Implementation required");
    }
 
+   /**
+    * @returns {Object} a wrapper with information about this command
+    */
    overview() {
       return {
          'command': this.constructor.name,
@@ -34,6 +49,13 @@ class Command {
 }
 //------------------- Type Classes ------------------//
 class Type extends Command {
+   /**
+    * @param {Sheet} sheet 
+    * @param {number} commandIndex 
+    * @param {string} content 
+    * @param {number} duration in milliseconds
+    * @param {number} delay in milliseconds
+    */
    constructor(sheet, commandIndex, content, duration, delay) {
       super(sheet, commandIndex, content, duration, delay);
    }
@@ -59,6 +81,13 @@ class Type extends Command {
 
 //------------------- Delete Classes ------------------//
 class Delete extends Command {
+   /**
+    * @param {Sheet} sheet 
+    * @param {number} commandIndex 
+    * @param {string} content 
+    * @param {number} duration in milliseconds
+    * @param {number} delay in milliseconds
+    */
    constructor(sheet, commandIndex, content, duration, delay) {
       super(sheet, commandIndex, content, duration, delay);
    }
@@ -112,6 +141,12 @@ class Cursor {
    // targetIndex
    // cursorElement
    // cursorPosition = 'end'
+
+   /**
+    * @param {Sheet} sheet 
+    * @param {Target} target 
+    * @param {HTMLElement} cursorElement 
+    */
    constructor(sheet, target, cursorElement) {
       this.sheet = sheet;
       this.target = target;
@@ -119,13 +154,19 @@ class Cursor {
       this.cursorPosition = 'end';
    }
 
+   /**
+    * points cursor to next target in sheet's target lists
+    * @returns {Target} next target
+    * @returns {null} null if cursor's pointing to end of target list
+    */
    toNextTarget() {
-      this.target = this.sheet.targets[this.target.targetIndex + 1];
+      let target = this.sheet.targets[this.target.targetIndex + 1];
 
-      if (this.target.isRemoved == false) {
-         if (this.target == null) {
+      if (target.isRemoved == false) {
+         if (target == null) {
             return null;
          } else {
+            this.target = target;
             return this.target;
          }
       } else {
@@ -134,13 +175,19 @@ class Cursor {
 
    }
 
+   /**
+    * points cursor to previous target in sheet's target lists
+    * @returns {Target} previous target
+    * @returns {null} null if cursor's pointing to start of target list
+    */
    toPreviousTarget() {
-      this.target = this.sheet.targets[this.target.targetIndex - 1];
+      let target = this.sheet.targets[this.target.targetIndex - 1];
 
-      if (this.target.isRemoved == false) {
-         if (this.target == null) {
+      if (target.isRemoved == false) {
+         if (target == null) {
             return null;
          } else {
+            this.target = target;
             return this.target;
          }
       } else {
@@ -150,10 +197,16 @@ class Cursor {
    }
 
    /**
+    * points cursor to new target
     * @param {Target} newTarget
+    * @throws {Error} if new target is null or undefined
     */
    toTarget(newTarget) {
-      this.target = newTarget;
+      if (newTarget == null || newTarget == undefined) {
+         throw new Error(`${this} cannot be moved to a ${newTarget} target`)
+      } else {
+         this.target = newTarget;
+      }
    }
 
    // render() { //inserts cursor before after this target (before next target)
@@ -176,6 +229,12 @@ class Target {
    // targetIndex
    // textContent
    // isRemoved
+
+   /**
+    * @param {HTMLElement} textNode 
+    * @param {number} targetIndex 
+    * @param {string} textContent 
+    */
    constructor(textNode, targetIndex, textContent) {
       this.textNode = textNode;
       this.targetIndex = targetIndex;
@@ -192,6 +251,11 @@ class Sheet {
    // targetStartIndex
    // cursor
    // estimatedDuration
+
+   /**
+    * @param {HTMLElement} htmlElement container of the sheet
+    * @param {HTMLElement} cursorElement element containing the cursor
+    */
    constructor(htmlElement, cursorElement) {
       this.commands = [];
       this.targets = [];
@@ -218,6 +282,12 @@ class Sheet {
       delete this.auditString;
    }
 
+   /**
+    * helper for sheet constructor to extract targets & comments
+    * @param {Node} node 
+    * @param {Array} commandContents 
+    * @param {number} commandIndex 
+    */
    extract(node, commandContents, commandIndex) {
       let childNode;
       for (let i = 0; i < node.childNodes.length; i++) {
@@ -264,6 +334,12 @@ class Sheet {
       return commandIndex;
    }
 
+   /**
+    * helper for Sheet.extract() to extract Type command
+    * @param {string} paramsStr string that contains parameters
+    * @param {string} contentStr string that contains the target text
+    * @returns {Type} a newly constructed Type command
+    */
    extractTypeCommand(paramsStr, contentStr) {
       let params = Sheet.extractChunks(paramsStr, /t\s*,\s*([0-9.]*\s*[ms]*)\s*,?\s*([0-9.]*\s*[ms]*)\s*/i);
       let duration = Sheet.extractTime(params[0]);
@@ -273,6 +349,11 @@ class Sheet {
       return new Type(this, this.commands.length, contentStr, duration, delay);
    }
 
+   /**
+    * helper for Sheet.extract() to extract Delete command
+    * @param {string} paramsStr string that contains parameters
+    * @returns {Delete} a newly constructed Delete command
+    */
    extractDeleteCommand(paramsStr) {
       let params = Sheet.extractChunks(paramsStr, /d\s*,\s*([^,]*)\s*,\s*([0-9.]*\s*[ms]*)\s*,?\s*([0-9.]*\s*[ms]*)\s*/i);
       let duration = Sheet.extractTime(params[1]);
@@ -299,6 +380,12 @@ class Sheet {
       return new Delete(this, this.commands.length, deleteContent, duration, delay);
    }
 
+   /**
+    * helper to extract chunk(s) from a string
+    * @param {string} string string to extract from
+    * @param {RegExp} regex regular expression needed for the extraction
+    * @returns {Array} an array containing the extracted string chunk(s) 
+    */
    static extractChunks(string, regex) {
       let extraction = string.split(regex);
       let chunks = [];
@@ -312,6 +399,11 @@ class Sheet {
       return chunks;
    }
 
+   /**
+    * helper to converts the time parameter to milliseconds when needed
+    * @param {string} timeParam string containing the time parameter
+    * @returns {number} (float) time in milliseconds
+    */
    static extractTime(timeParam) { //if s, converts to ms
       let params = Sheet.extractChunks(timeParam, /([0-9.]*)\s*([ms]*)/i);
       let time = parseFloat(params[0]);
@@ -327,6 +419,9 @@ class Sheet {
       return time;
    }
    //-------------------------------------------------------//
+   /**
+    * executes the command list from this sheet
+    */
    async execute() {
       let command;
       for (let i = 0; i < this.commands.length; i++) {
@@ -338,10 +433,16 @@ class Sheet {
       }
    }
 
+   /**
+    * 
+    */
    async reset() {
       this.htmlElement.innerHTML = this.initialInnerHTML;
    }
 
+   /**
+    * @returns {Array} information about the command list
+    */
    commandOverview() {
       let overview = [];
       for (let i = 0; i < this.commands.length; i++) {
@@ -353,18 +454,36 @@ class Sheet {
 }
 //------------------- Typewriter Class ------------------//
 class Typewriter {
+   /**
+    * constructs a Sheet object containing information about the animation
+    * @param {HTMLElement} htmlElement the container where the animation takes place
+    * @param {HTMLElement} cursorElement the element that contains the cursor
+    */
+   static feed(htmlElement, cursorElement) {
+      return new Sheet(htmlElement, cursorElement);
+   }
+
+   /**
+    * initiate the animation
+    * @param {Sheet} sheet 
+    */
    static async type(sheet) {
       await sheet.execute();
    }
 
-   static feed(htmlElement, nodeElement) {
-      return new Sheet(htmlElement, nodeElement);
-   }
-
+   /**
+    * 
+    * @param {Sheet} sheet 
+    */
    static reset(sheet) {
       sheet.reset();
    }
 
+   /**
+    * helper to span the right amount of time for the animation
+    * (synchronous timeout)
+    * @param {number} ms time in milliseconds
+    */
    static sleep(ms) { //helper for command.execute()
       return new Promise(resolve => window.setTimeout(resolve, ms));
    }
