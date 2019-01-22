@@ -202,11 +202,7 @@ class Cursor {
     * @throws {Error} if new target is null or undefined
     */
    toTarget(newTarget) {
-      if (newTarget == null || newTarget == undefined) {
-         throw new Error(`${this} cannot be moved to a ${newTarget} target`)
-      } else {
-         this.target = newTarget;
-      }
+      this.target = newTarget;
    }
 
    // render() { //inserts cursor before after this target (before next target)
@@ -272,8 +268,8 @@ class Sheet {
          this.auditString += commandContents[commandIndex];
          commandIndex++;
       };
-
       this.extract(htmlElement, commandContents, commandIndex);
+
       for (let i = this.targetStartIndex; i < this.targets.length; i++) {
          this.targets[i].textNode.textContent = "";
       }
@@ -434,9 +430,28 @@ class Sheet {
    }
 
    /**
-    * 
+    * revert to the initial state after feeding, ready to start animation again
     */
-   async reset() {
+   reset() {
+      let i;
+      let target;
+      for (i = 0; i < this.targetStartIndex; i++) {
+         target = this.targets[i];
+         target.textNode.textContent = target.textContent;
+         target.isRemoved = false;
+      }
+      for (i = this.targetStartIndex; i < this.targets.length; i++) {
+         target = this.targets[i];
+         target.textNode.textContent = "";
+         target.isRemoved = false;
+      }
+      this.cursor.target = this.targets[this.targetStartIndex];
+   }
+   
+   /**
+    * aborts this animation, revert to initial text
+    */
+   revert() {
       this.htmlElement.innerHTML = this.initialInnerHTML;
    }
 
@@ -472,13 +487,20 @@ class Typewriter {
    }
 
    /**
-    * 
+    * reset and pause animation
+    * call type to start animation again
     * @param {Sheet} sheet 
     */
    static reset(sheet) {
       sheet.reset();
    }
 
+   /**
+    * aborts this animation, revert to initial text
+    */
+   static revert(sheet) {
+      sheet.revert();
+   }
    /**
     * helper to span the right amount of time for the animation
     * (synchronous timeout)
