@@ -68,22 +68,20 @@ class Loop extends Command {
    }
 
    async execute() {
-      if (this.count != Infinity) {
-         let i;
-         let target;
-         for (i = 0; i < this.sheet.targetStartIndex; i++) {
-            target = this.sheet.targets[i];
-            target.textNode.textContent = target.textContent;
-            target.isRemoved = false;
-         }
-         for (i = this.sheet.targetStartIndex; i <= this.sheet.cursor.target.targetIndex; i++) {
-            target = this.sheet.targets[i];
-            target.textNode.textContent = "";
-            target.isRemoved = false;
-         }
-         this.sheet.cursor.target = this.sheet.targets[this.sheet.targetStartIndex];
-         this.count--;
+      let i;
+      let target;
+      for (i = 0; i < this.sheet.targetStartIndex; i++) {
+         target = this.sheet.targets[i];
+         target.textNode.textContent = target.textContent;
+         target.isRemoved = false;
       }
+      for (i = this.sheet.targetStartIndex; i <= this.sheet.cursor.target.targetIndex; i++) {
+         target = this.sheet.targets[i];
+         target.textNode.textContent = "";
+         target.isRemoved = false;
+      }
+      this.sheet.cursor.target = this.sheet.targets[this.sheet.targetStartIndex];
+      if (this.count != Infinity) this.count--;
    }
 
    /**
