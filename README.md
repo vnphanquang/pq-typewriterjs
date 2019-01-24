@@ -1,6 +1,8 @@
 # Table of Contents
 - [Table of Contents](#table-of-contents)
 
+- [Changelog](#changelog)
+
 - [What Is This? and Why Does It Even Exist?](#what-is-this-and-why-does-it-even-exist)
 
 - [Steps](#steps)
@@ -9,7 +11,8 @@
 
 - [Documentation](#documentation)
   - [Markup Restrictions & Recommendations](#markup-restrictions--recommendations)
-  - [Command](#command)
+  - [Commands](#command)
+  - [Looping](#looping)
   - [Typewrtier Static Methods](#typewrtier-static-methods)
   - [Debugging Sheet](#debugging-sheet)
 
@@ -19,18 +22,27 @@
   - [Sheet Construction - Typewriter `Feeding`](#sheet-construction---typewriter-feeding)
   - [Sheet Execution - Typewriter `Typing`](#sheet-execution---typewriter-typing)
 
+# Changelog
+
+2019.01.23
+   - `feeding` no longer requires cursor argument. See [Typewriter Static Methods](#typewrtier-static-methods)
+   - introduces `revert`. Animation can now be `typed` again after `reset`. See [`reset` or `revert`?](#reset-or-revert)
+   - introduces `Loop` command, allows finite or infinte loop around a set of commands. See [Looping](#looping)
+
+
 # What Is This? and Why Does It Even Exist?
 
 Blah blah blah? See [Steps](#steps) and get right to it.
 
 **pq-typewriterjs** (*pq*) is a small Javascript library that provides a solution to typing animation on the web. It employs ES6 class syntatic sugar with an object-oriented approach in mind.
-
+****
 There are plenty of solutions out there, and if you only need an one-time, single-line typing animation in pure CSS, this might not be for you. But read on, since *pq* offers some features that you might be looking for:
 
 - Parameterization with [commands](#2-write-commands-in-markup) in HTML markup through comments (hence no interference with document flow),
-- Multi-line dynamic typing & deleting,
+- Multi-line dynamic typing, deleting, and [looping](#looping),
 - User-customized styling for text, nested elements, and cursor with CSS,
-- [Initiation](#4-initiate-in-javascript) with Javascript, integration with button click or other events, ...
+- [Initiation](#4-initiate-in-javascript) with Javascript, integration with button click or other events,
+- Vanila HTML, CSS, JS. No dependencies (no jQuery or external libraries),...
 
 Wat da hell does dat mean? Basically:
 - you tell what to type or delete, in how long, with HTML. 
@@ -53,13 +65,10 @@ Is this whole thing being overcomplicated? Probably YES!
 
 ## 2. Write [*commands*](#command) in markup
 
-Example: `<!--t, 5s, 200ms-->` and `<!--d, all, 5s, 200ms-->`, as seen below
+Example: `<!--t, 5s, 200ms-->`, `<!--d, all, 5s, 200ms-->`, and `<!--l, infinite-->` as seen below
 
    ```HTML
-   <pre id="typewriter">
-   <!--t, 5s, 200ms-->wait for 200ms, <i>type this text</i> in 5s, wait for another 500ms, then <strong>delete everything<strong> in 3s<!--d, all, 3s, 500ms-->
-   <span id="cursor"></span>
-   </pre>
+   <pre id="typewriter"><!--t, 5s, 200ms-->wait for 200ms, <i>type this text</i> in 5s, wait for another 500ms, then <strong>delete everything</strong> in 3s<!--d, all, 3s, 500ms--><!--l,infinite--><span id="cursor"></span></pre>
    ```
 [Documentation & Recommendations](#command)
    
@@ -86,19 +95,18 @@ Example: optionally, include `-o-`, `-webkit-`, and `-moz-` for cross-browser co
 Example: invoke `Typewriter.feed()` and `Typewrtier.type()`, that's all
 
    ```Javascript
-   const cursor = document.getElementById("cursor");
    const typewriter = document.getElementById("typewriter");
-
-   var sheet = Typewriter.feed(typewriter, cursor); //<---feed as soon as possible
+   var sheet = Typewriter.feed(typewriter); //<---feed as soon as possible
    //...
    Typewriter.type(sheet); //<-- type whenever ready
-   // Typewriter.reset(sheet); <-- if needed
    ```
-   [Cautions](#typewrtier-static-methods)
+   More information: [Cautions](#typewrtier-static-methods), [`reset` or `revert`?](#reset-or-revert)
 
 # Documentation
 
 ## Markup Restrictions & Recommendations
+
+- See [looping](#looping) on how to use Loop command
 
 - No text is allowed between between `delete command` and `type command`. For example:
 
@@ -118,13 +126,14 @@ Example: invoke `Typewriter.feed()` and `Typewrtier.type()`, that's all
    ```
    or
    ```HTML
-   <p>.........<span id="cursor">use this content as the cursor</span></p>
+   <p>.........<span id="cursor">your customized cursor</span></p>
    ```
 
 - The `<pre>` tag is recommended for the **typewriter** element to honor line break in a multiline typing manner.
 
    ```HTML
-   <pre>.......line break is honored.......</pre>
+   <pre>.......line break 
+   is honored.......</pre>
    ```
    If wrapping is concerned, see CSS [white-space](https://developer.mozilla.org/en-US/docs/Web/CSS/white-space), [word-break](https://developer.mozilla.org/en-US/docs/Web/CSS/word-break), and [overflow-wrap](https://developer.mozilla.org/en-US/docs/Web/CSS/overflow-wrap).
 
@@ -139,13 +148,15 @@ Example: invoke `Typewriter.feed()` and `Typewrtier.type()`, that's all
    |---     |---                                            |---                          |
    |Type    |`<!--t, duration[, delay]-->{content}`         |`<--t, 2s, 500ms-->...`         |
    |Delete  |`{content}<!--d, target, duration[, delay]-->` |`...<--d, 42, 500ms, 200ms-->`  |
+   |Loop    |`<!--l, count, delay-->`                       |`<!--l, infinite-->`            |
 
 - ### Parameters
 
-   |Command |Target                   |Duration   |Delay (optional)         |Content
-   |:---:   |:---:                    |:---:      |:---:                    |:---:           |
-   |t       |                         |`ms` or `s`|`ms` or `s`, 0 by default|some text after command|
-   |d       |`all`/`substring`/`count`|`ms` or `s`|`ms` or `s`, 0 by default|some text before command|
+   |Command |Target                   |Count |Duration   |Delay (optional)         |Content|
+   |:---:   |:---:                    |:---:      |:---:    |:---:           | :---:|
+   |t       |                         ||`ms` or `s`|`ms` or `s`, 0 by default|some text after|
+   |d       |`all`/`substring`/`count`||`ms` or `s`|`ms` or `s`, 0 by default|some text before|
+   |l||`count`/`infinite`||`ms` or `s`, 0 by default|all other commands before
    
 
 - ### Delete Target Options
@@ -156,6 +167,32 @@ Example: invoke `Typewriter.feed()` and `Typewrtier.type()`, that's all
    |substring|`<!--d, john dough, 5s, 2s-->`|deletes any text after the substring "`john dough`" (if multiple matches, first match counting from the right is honored)|
    |count|`<!--d, 42, 5s, 300ms-->`|deletes 42 characters, including whitespace and linebreak, counting from the right|
 
+   [Markup Restriction for Type/Delete commands](#markup-restrictions--recommendations)
+
+## Looping
+
+A `Loop` command creates a number of iteration from itself around all other commands found before it in markup.
+
+A `Loop` command must follow a `Delete` command: `type` something, `delete` what has just been typed, then do those again. If you need to type something twice in a row, do not use loop, simply include 2 consecutive `type` commands.
+
+There are two scenarios when a `Loop` command is needed:
+
+   1. ### Infinite `Loop` at the end of the command chain. Example:
+      ```HTML
+      <pre id="typewriter"><!--t, 5s, 200ms-->wait for 200ms, <i>type this text</i> in 5s, wait for another 500ms, then <strong>delete everything</strong> in 3s, then do everything again infinitely<!--d, all, 3s, 500ms--><!--l,infinite--><span id="cursor"></span></pre>
+      ```
+
+   2. ### Finite `Loop` somewhere in the command chain. Be cautious that in this case, a `Loop` must be followed by another command, no plain text is allowed. Example:
+
+      do
+      ```HTML
+      <pre id="typewriter"><!--t, 1s, .5s-->type this, then delete that, and do those 3 times<!--d, all, 1s, .5s--><!--l, 3, .5s--><!--t, 1s, .5s--> then move on and type this...<span id="cursor"></span></pre>
+      ```
+      instead of
+      ```HTML
+      <pre id="typewriter"><!--t, 1s, .5s-->type this, then delete that, and do those 3 times<!--d, all, 1s, .5s--><!--l, 3, .5s--> then move on and type this<!--...--><span id="cursor"></span></pre>
+      ```
+
 ## `Typewrtier` Static Methods
 
 ![Typewriter Method Infographics](/infographics/typewriter-static-methods.svg)
@@ -164,25 +201,34 @@ Example: invoke `Typewriter.feed()` and `Typewrtier.type()`, that's all
 
    |Method|Parameters|Return|
    |---|---|---|
-   |`Typewriter.feed(<HTMLElement>, <HTMLElement>)`|first: `typewriter element`, second: `cursor element` |a `Sheet` object|
+   |`Typewriter.feed(<HTMLElement>)`|container `HTMLElement`|a `Sheet` object|
    |`Typewriter.type(<Sheet)`|a `Sheet` object|none|
    |`Typewriter.reset(<Sheet>)`|a `Sheet` object|none|
+   |`Typewriter.revert(<Sheet>)`|a `Sheet` object|cursor `HTMLElement`|
 
    #### Cautions: 
-   - Always capture the returned `Sheet` object to use it in `type` and `reset`.
+   - Always capture the returned `Sheet` object to use it in `type`, `reset`, and `revert`.
       ```Javascript
-      var sheet = Typewriter.feed(typewriter, cursor);
+      var sheet = Typewriter.feed(typewriter);
       // Typewriter.type(sheet);
       // Typewriter.reset(sheet)
+      // Typewriter.revert(sheet)
       ```
-   - Every `sheet` can only be typed once and required feeding after each reset to be typed again:
+
+   - Previously, a `sheet` can be typed only one time. With the latest implementation, `sheet` can be used again after `reset` without calling `feed` again.
       ```Javascript
       Typewriter.type(sheet);
+      //...after animation has completed
       Typewriter.reset(sheet);
-      //...some time later ...
-      sheet = Typewriter.feed(typewriter, cursor);
+      //...some time later
       Typewriter.type(sheet);
       ```
+
+   - #### `Reset` or `revert`? 
+     - `Reset` will turn to the start of the animation (after `feed`) and pause. `Type` can be called to run the animation again.
+     - `Revert` will turn to the inital state of the element (before `feed`). Call `revert` if you no longer wish to run the animation.
+
+   - See [Looping](#looping) for instruction on how to use `Loop` Command
 
 - ### What do they do?
 
@@ -190,13 +236,14 @@ Example: invoke `Typewriter.feed()` and `Typewrtier.type()`, that's all
    |:---:|---|
    |`feed`|extracts and processes commands, deletes target contents, gets ready for animation|
    |`type`|initiates the animation process|
-   |`reset`|pastes back the inital innerHTML of `typewriter` element|
+   |`reset`|resets and pause animation. Simply call `type` to start animation again|
+   |`revert`|reverts innitial innerHTML, removes cursor, and returns cursor HTMLElement|
 
 ## Debugging `Sheet` 
 
    Call `.commandOverview()` to see details of all the extracted commands.
    ```Javascript
-   var sheet = Typewriter.feed(typewriter, cursor);
+   var sheet = Typewriter.feed(typewriter);
    console.table(sheet.commandOverview());
    ```
    Note that delay and duration will be shown in milliseconds.
@@ -212,7 +259,7 @@ Likewise, any contribution or idea is incredibly valuable. Thank you.
 The following features will be implemented in the near future:
 
 - Moving cursor left or  right during operation
-- Looping through a set of commands for a finite or infinite amount of times.
+- Pausing & Resuming animation
 
 # Behind the Scenes
 
@@ -225,7 +272,7 @@ The key concept that differs this project from other solutions is the constructi
 During `feeding`, **typewriter**'s [Child Nodes](https://developer.mozilla.org/en-US/docs/Web/API/Node/childNodes) are iterated:
 - the **cursor** element is extracted into a `Cursor` object, pointed to by `Sheet.cursor`, and
 - every [Text](https://developer.mozilla.org/en-US/docs/Web/API/Text) node is extracted into a `Target` object, added to `Sheet.targets`, and 
-- every [Comment](https://developer.mozilla.org/en-US/docs/Web/API/Comment) node is extracted into a `Command`, either `Type`, or `Delete`, added to `Sheet.commands`.
+- every [Comment](https://developer.mozilla.org/en-US/docs/Web/API/Comment) node is extracted into a `Command` - `Type`, `Delete`, or `Loop` - added to `Sheet.commands`, making up a command chain.
 
 ## Sheet Execution - Typewriter `Typing`
 
@@ -233,7 +280,7 @@ After `feeding`:
 
 ![Sheet after feeding](/infographics/sheet-after-feeding.svg)
 
-During `Typewriter typing`, `Sheet.commands` is iterated, each `Command` is executed in order, `Sheet.cursor` is updated accordingly. As seen below, the `Type` command and `Sheet.cursor` work together to render text to `Sheet.htmlElement`. The next `Delete` command works in a much similar way, but in reverse.
+During `Typewriter typing`, `Sheet.commands` is iterated, each `Command` is executed in order, `Sheet.cursor` is updated accordingly. As seen below, the `Type` command and `Sheet.cursor` work together to render text to `Sheet.htmlElement`. The next `Delete` command works in a much similar way, but in reverse. If included, a [`Loop`](#looping) command will iterate all the previous commands.
 
 ![Sheet execution](/infographics/sheet-execution.svg)
 
