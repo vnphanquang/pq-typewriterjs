@@ -41,10 +41,11 @@ class Command {
       return {
          'command': this.constructor.name,
          'sheet': this.sheet,
+         'count': this.count,
          'duration': this.duration,
          'delay': this.delay,
          'timeout': Math.round(this.timeout),
-         'content': this.content
+         'content': this.content,
       };
    }
 
@@ -55,7 +56,6 @@ class Loop extends Command {
    // no content and duration
    
    /**
-    * 
     * @param {Sheet} sheet 
     * @param {number} commandIndex 
     * @param {number} delay 
@@ -63,30 +63,37 @@ class Loop extends Command {
     */
    constructor(sheet, commandIndex, delay, count) {
       super(sheet, commandIndex, undefined, undefined, delay);
-      this.count = count;
+      this.count = count - 1 ; //minus the first run to get to this Loop command
+      this.initialCount = count - 1; //for reset
    }
 
    async execute() {
       if (this.count != Infinity) {
+         let i;
+         let target;
+         for (i = 0; i < this.sheet.targetStartIndex; i++) {
+            target = this.sheet.targets[i];
+            target.textNode.textContent = target.textContent;
+            target.isRemoved = false;
+         }
+         for (i = this.sheet.targetStartIndex; i <= this.sheet.cursor.target.targetIndex; i++) {
+            target = this.sheet.targets[i];
+            target.textNode.textContent = "";
+            target.isRemoved = false;
+         }
+         this.sheet.cursor.target = this.sheet.targets[this.sheet.targetStartIndex];
          this.count--;
       }
-      let i;
-      let target;
-      for (i = 0; i < this.sheet.targetStartIndex; i++) {
-         target = this.sheet.targets[i];
-         target.textNode.textContent = target.textContent;
-         target.isRemoved = false;
-      }
-      for (i = this.sheet.targetStartIndex; i <= this.sheet.cursor.target.targetIndex; i++) {
-         target = this.sheet.targets[i];
-         target.textNode.textContent = "";
-         target.isRemoved = false;
-      }
-      this.sheet.cursor.target = this.sheet.targets[this.sheet.targetStartIndex];
+   }
+
+   /**
+    * resets loop count so that this command can be used again after Typewriter.reset()
+    */
+   resetCount() {
+      this.count = this.initialCount;
    }
 
 }
-
 //------------------- Type Classes ------------------//
 class Type extends Command {
    /**
@@ -154,8 +161,9 @@ class Delete extends Command {
       }
       start = cursor.target.targetIndex; //index of node being deleted
       
+      let nextCommand = this.sheet.commands[this.commandIndex + 1];
       //if next command is loop, point to the end target (start of this command)
-      if (this.sheet.commands[this.commandIndex + 1] instanceof Loop) {
+      if (nextCommand instanceof Loop && nextCommand.count > 0) {
          cursor.toTarget(this.sheet.targets[end]);
       } else {
          //if target still has content then point to next target
@@ -168,7 +176,7 @@ class Delete extends Command {
          }
    
          //if next command is delete, point to previous target
-         if (this.sheet.commands[this.commandIndex + 1] instanceof Delete) {
+         if (nextCommand instanceof Delete) {
             cursor.toTarget(this.sheet.targets[start - 1]);
          }
          //if next command is type & there is still targets, 
@@ -295,9 +303,8 @@ class Sheet {
 
    /**
     * @param {HTMLElement} htmlElement container of the sheet
-    * @param {HTMLElement} cursorElement element containing the cursor
     */
-   constructor(htmlElement, cursorElement) {
+   constructor(htmlElement) {
       this.commands = [];
       this.targets = [];
       this.htmlElement = htmlElement;
@@ -305,7 +312,8 @@ class Sheet {
       this.estimatedDuration = 0;
 
       this.auditString = "";
-
+      let cursorElement = this.htmlElement.lastChild;
+      cursorElement.remove();
       let commandContents = Sheet.extractChunks(this.initialInnerHTML.replace(/<[^!>]*>/g, ""), /(<!--[^>]*-->)/);
       let commandIndex = 0;
 
@@ -319,6 +327,7 @@ class Sheet {
          this.targets[i].textNode.textContent = "";
       }
       this.cursor = new Cursor(this, this.targets[this.targetStartIndex], cursorElement);
+      this.htmlElement.appendChild(cursorElement);
 
       delete this.auditString;
    }
@@ -331,7 +340,7 @@ class Sheet {
     */
    extract(node, commandContents, commandIndex) {
       let childNode;
-      for (let i = 0; i < node.childNodes.length; i++) {
+      for (let i = 0; i < node.childNodes.length ; i++) {
          childNode = node.childNodes[i];
          switch (childNode.nodeType) {
             case 1: //ELEMENT_NODE
@@ -348,8 +357,8 @@ class Sheet {
                switch (paramsStr.charAt(0)) {
                   case "t":
                   case "T":
-                     if (childNode.nextSibling.textContent == "" || childNode.nextSibling.nodeType == 8) { //no text to type
-                        throw new Error(`Command ${childNode.textContent} has no target text to type`);
+                     if (childNode.nextSibling == null || childNode.nextSibling.nodeType == 8) { //no text to type
+                        throw new Error(`Command <${childNode.textContent}> has no target text to type.`);
                      } else {
                         this.commands.push(this.extractTypeCommand(paramsStr, commandContents[commandIndex + 1]));
                         commandIndex += 2;
@@ -358,7 +367,7 @@ class Sheet {
                   case "d":
                   case "D":
                      if (childNode.previousSibling == null) {
-                        throw new Error(`Command ${childNode.textContent} has no target text to delete`);
+                        throw new Error(`Command <${childNode.textContent}> has no target text to delete.`);
                      } else {
                         this.commands.push(this.extractDeleteCommand(paramsStr));
                         commandIndex++;
@@ -367,14 +376,21 @@ class Sheet {
                   case "l":
                   case "L":
                      let loop = this.extractLoopCommand(paramsStr);
-                     if (loop.count == Infinity && childNode.nextSibling.textContent != "") {
-                        throw new Error(`Infinite Loop Command must be place at the end of element`);
+                     if (childNode.nextSibling != null && loop.count == Infinity) {
+                        if (loop.count == Infinity) {
+                           throw new Error(`Infinite Loop command must be place at the end of element.`);
+                        } else if (childNode.nextSibling.nodeType != 8){
+                           throw new Error(`Finite Loop command must be followed by another command.`);
+                        }
+                     } else if (childNode.previousSibling == null || childNode.previousSibling.nodeType != 8) {
+                        throw new Error(`Loop command must follow a Delete command.`)
                      } else {
                         this.commands.push(loop);
-                     }
+                        commandIndex++;
                      break;
+                     }
                   default:
-                     throw new Error(`Command ${childNode.textContent} is not supported by Typewriter.`);
+                     throw new Error(`Command <${childNode.textContent}> is not supported by Typewriter.`);
                }
                break;
             default:
@@ -486,22 +502,28 @@ class Sheet {
     */
    async execute() {
       let command;
-      let isLooped = true;
+      let i = 0;
       do {
-         for (let i = 0; i < this.commands.length; i++) {
-            command = this.commands[i];
+         command = this.commands[i];
+         if (command instanceof Loop) {
+            if (command.count > 0) {
+               if (command.delay != 0) {
+                  await Typewriter.sleep(command.delay);
+               }
+               await command.execute();
+               i = 0;
+            } else {
+               command.resetCount();
+               i++;
+            }
+         } else {
             if (command.delay != 0) {
                await Typewriter.sleep(command.delay);
             }
             await command.execute();
-
-            // if Loop command & loop cunt is zero, break;
-            if (command.count == 0) {
-               isLooped = false;
-               break;
-            }
+            i++;
          }
-      } while(isLooped);
+      } while (i < this.commands.length);
    }
 
    /**
@@ -547,10 +569,9 @@ class Typewriter {
    /**
     * constructs a Sheet object containing information about the animation
     * @param {HTMLElement} htmlElement the container where the animation takes place
-    * @param {HTMLElement} cursorElement the element that contains the cursor
     */
-   static feed(htmlElement, cursorElement) {
-      return new Sheet(htmlElement, cursorElement);
+   static feed(htmlElement) {
+      return new Sheet(htmlElement);
    }
 
    /**
