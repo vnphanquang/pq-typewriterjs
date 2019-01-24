@@ -408,7 +408,7 @@ class Sheet {
       let params = Sheet.extractChunks(paramsStr, /l\s*,\s*(\w*),?\s*([0-9.]*\s*[ms]*)\s*/i);
       let count = (params[0] == "infinite") ? Infinity : parseFloat(params[0]);
       let delay = (params.length == 2) ? Sheet.extractTime(params[1]) : 0;
-      this.estimatedDuration = (count == Infinity) ? Infinity : (this.estimatedDuration * count);
+      this.estimatedDuration = (count == Infinity) ? Infinity : ((this.estimatedDuration + delay) * count);
       return new Loop(this, this.commands.length, delay, count);
    }
 
