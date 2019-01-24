@@ -146,7 +146,6 @@ class Delete extends Command {
       while (count > 0) {
          if (i == 0) {
             if (cursor.toPreviousTarget() == null) {
-               console.log(cursor.target.textNode.textContent);
                break;
             }
             i = cursor.target.textNode.textContent.length;
@@ -213,15 +212,17 @@ class Cursor {
    toNextTarget() {
       let target = this.sheet.targets[this.target.targetIndex + 1];
 
-      if (target.isRemoved == false) {
+      while(true) {
          if (target == null) {
-            return null;
+            return null; //reaches end target
          } else {
-            this.target = target;
-            return this.target;
+            if (target.isRemoved == false) {
+               this.target = target;
+               return this.target;
+            } else {
+               target = this.sheet.targets[target.targetIndex + 1];
+            }
          }
-      } else {
-         return this.toNextTarget();
       }
 
    }
@@ -233,18 +234,19 @@ class Cursor {
     */
    toPreviousTarget() {
       let target = this.sheet.targets[this.target.targetIndex - 1];
-
-      if (target.isRemoved == false) {
+      
+      while(true) {
          if (target == null) {
-            return null;
+            return null; //reaches start target
          } else {
-            this.target = target;
-            return this.target;
+            if (target.isRemoved == false) {
+               this.target = target;
+               return this.target;
+            } else {
+               target = this.sheet.targets[target.targetIndex - 1];
+            }
          }
-      } else {
-         return this.toPreviousTarget();
       }
-
    }
 
    /**
@@ -594,6 +596,8 @@ class Typewriter {
     */
    static revert(sheet) {
       sheet.revert();
+      sheet.cursor.cursorElement.remove();
+      return sheet.cursor.cursorElement;
    }
    /**
     * helper to span the right amount of time for the animation
