@@ -323,6 +323,9 @@ class Sheet {
       };
       this.extract(htmlElement, commandContents, commandIndex);
 
+      if (this.targetStartIndex == this.targets.length) {
+         this.targetStartIndex--;
+      }
       for (let i = this.targetStartIndex; i < this.targets.length; i++) {
          this.targets[i].textNode.textContent = "";
       }
@@ -596,7 +599,7 @@ class Typewriter {
     */
    static revert(sheet) {
       sheet.revert();
-      sheet.cursor.cursorElement.remove();
+      sheet.htmlElement.lastChild.remove();
       return sheet.cursor.cursorElement;
    }
    /**
