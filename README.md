@@ -226,7 +226,7 @@ There are two scenarios when a `Loop` command is needed:
 
    - #### `Reset` or `revert`? 
      - `Reset` will turn to the start of the animation (after `feed`) and pause. `Type` can be called to run the animation again.
-     - `Revert` will turn to the inital state of the element (before `feed`). Call `revert` if you no longer wish to run the animation.
+     - `Revert` will turn to the inital state of the element (before `feed`). Be cautious that `revert` will remove **cursor** element. Call `revert` if you no longer wish to run the animation.
 
    - See [Looping](#looping) for instruction on how to use `Loop` Command
 
