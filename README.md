@@ -77,7 +77,7 @@ Example: `<!--t, 5s, 200ms-->`, `<!--d, all, 5s, 200ms-->`, and `<!--l, infinite
 Example: optionally, include `-o-`, `-webkit-`, and `-moz-` for cross-browser compatibility
 
    ```CSS
-   #cursor::after {
+   #cursor::before {
       content: "|";
       color: transparent;
       background-color: orange;
