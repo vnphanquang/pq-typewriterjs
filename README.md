@@ -60,7 +60,7 @@ Is this whole thing being overcomplicated? Probably YES!
 ## 1. Include *pq-typewriter.js* in markup header locally or through CDN
 
    ```HTML
-   <script type="text/javascript" src="https://cdn.jsdelivr.net/gh/vnphanquang/pq-typewriterjs@master/pq-typewriter.js"></script>
+   <script type="text/javascript" src="https://cdn.jsdelivr.net/gh/vnphanquang/pq-typewriterjs/pq-typewriter.js"></script>
    ```
 
 ## 2. Write [*commands*](#command) in markup

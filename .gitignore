@@ -1,1 +1,3 @@
 testing/
+*.ts
+tsconfig.json
