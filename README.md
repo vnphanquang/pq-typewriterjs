@@ -6,7 +6,7 @@
 - [What Is This? and Why Does It Even Exist?](#what-is-this-and-why-does-it-even-exist)
 
 - [Steps](#steps)
-  - [***Demo***](https://codepen.io/vnphanquang/pen/dwxjJE)
+  - [***Demo***](https://jsfiddle.net/vnphanquang/0hacv51p/)
   - [CDN](#1-include-pq-typewriterjs-in-markup-header-locally-or-through-cdn)
 
 - [Documentation](#documentation)
