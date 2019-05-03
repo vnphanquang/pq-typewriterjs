@@ -55,7 +55,7 @@ Is this whole thing being overcomplicated? Probably YES!
 
 # Steps
 
-## 0. See a [***Demo***](https://codepen.io/vnphanquang/pen/dwxjJE)
+## 0. See a [***Demo***](https://jsfiddle.net/vnphanquang/0hacv51p/)
 
 ## 1. Include *pq-typewriter.js* in markup header locally or through CDN
 
